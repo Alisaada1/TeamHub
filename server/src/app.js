@@ -1,7 +1,12 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import fs from "node:fs";
+
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+
 import { resolveClerkUser, requireUser } from "./middleware/clerkAuth.js";
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
 
@@ -18,11 +23,41 @@ import invitationRoutes from "./routes/invitations.js";
 import dashboardRoutes from "./routes/dashboard.js";
 import activityRoutes from "./routes/activity.js";
 
-const app = express();
-
 import { ALLOWED_ORIGINS } from "./config/env.js";
 
-app.use(helmet());
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const distDir = path.resolve(__dirname, "../../client/dist");
+const indexHtml = path.join(distDir, "index.html");
+
+const app = express();
+
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        upgradeInsecureRequests: [],
+        scriptSrc: ["'self'", "blob:", "https://*.clerk.com", "https://*.clerk.accounts.dev", "https://*.clerk.app"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "blob:", "https://img.clerk.com"],
+        connectSrc: [
+          "'self'",
+          "https://api.clerk.com",
+          "https://*.clerk.com",
+          "https://*.clerk.accounts.dev",
+          "https://*.clerk.app",
+          "https://img.clerk.com",
+          "https://fonts.googleapis.com",
+          "https://fonts.gstatic.com",
+        ],
+        frameSrc: ["'self'", "https://*.clerk.com", "https://*.clerk.accounts.dev", "https://*.clerk.app"],
+        workerSrc: ["'self'", "blob:"],
+        objectSrc: ["'none'"],
+      },
+    },
+  })
+);
 app.use(cors({ origin: ALLOWED_ORIGINS, credentials: true }));
 app.use(express.json({ limit: "1mb" }));
 
@@ -49,6 +84,16 @@ app.use("/api/presence", presenceRoutes);
 app.use("/api/invitations", invitationRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/activity", activityRoutes);
+
+app.use(express.static(distDir));
+
+app.get("*", (req, res, next) => {
+  const p = req.path;
+  if (p.startsWith("/api")) return next();
+  if (path.extname(p)) return next();
+  if (!fs.existsSync(indexHtml)) return next();
+  res.sendFile(indexHtml);
+});
 
 app.use(notFound);
 app.use(errorHandler);
