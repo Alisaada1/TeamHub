@@ -24,6 +24,7 @@ import dashboardRoutes from "./routes/dashboard.js";
 import activityRoutes from "./routes/activity.js";
 
 import { ALLOWED_ORIGINS } from "./config/env.js";
+import prisma from "./config/prisma.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distDir = path.resolve(__dirname, "../../client/dist");
@@ -70,6 +71,15 @@ app.use("/api", apiLimiter);
 app.use(resolveClerkUser);
 
 app.use("/api/auth", authRoutes);
+
+app.get("/api/health", async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ ok: true });
+  } catch {
+    res.status(503).json({ ok: false });
+  }
+});
 
 app.use("/api", requireUser);
 
