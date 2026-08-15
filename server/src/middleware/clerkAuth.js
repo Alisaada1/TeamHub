@@ -31,7 +31,7 @@ function isTransientError(err) {
   );
 }
 
-async function withRetry(fn, attempts = 3, delayMs = 300) {
+async function withRetry(fn, attempts = 6, delayMs = 500) {
   let lastErr;
   for (let i = 0; i < attempts; i++) {
     try {
