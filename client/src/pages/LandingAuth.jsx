@@ -7,6 +7,12 @@ import Logo from "../components/layout/Logo";
 import OtpInput from "../components/ui/OtpInput";
 import { SunIcon, MoonIcon, LangIcon } from "../components/icons/Icons";
 
+const PROVIDER_STRATEGIES = {
+  google: "oauth_google",
+  github: "oauth_github",
+  linkedin: "oauth_linkedin_oidc",
+};
+
 const UsersIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -491,7 +497,7 @@ export function SignIn() {
     setSocialLoading(provider);
     try {
       await signIn.authenticateWithRedirect({
-        strategy: `oauth_${provider}`,
+        strategy: PROVIDER_STRATEGIES[provider],
         redirectUrl: `${window.location.origin}/sso-callback`,
         redirectUrlComplete: `${window.location.origin}${from}`,
       });
