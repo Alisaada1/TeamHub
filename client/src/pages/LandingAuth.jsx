@@ -677,7 +677,6 @@ export function SignUp() {
   const [step, setStep] = useState("form");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -698,16 +697,12 @@ export function SignUp() {
       return;
     }
 
-    if (!firstName || !username || !email || !password) {
+    if (!firstName || !email || !password) {
       setError(t("auth.errors.allFieldsRequired"));
       return;
     }
     if (firstName.trim().length < 2) {
       setError(t("auth.errors.nameTooShort"));
-      return;
-    }
-    if (username.trim().length < 3) {
-      setError(t("auth.errors.usernameTooShort"));
       return;
     }
     if (!isValidEmail(email)) {
@@ -729,7 +724,6 @@ export function SignUp() {
       const result = await signUp.create({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        username: username.trim(),
         emailAddress: email,
         password,
       });
@@ -935,34 +929,6 @@ export function SignUp() {
                         placeholder={t("auth.lastNamePlaceholder")}
                       />
                     </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="username"
-                    className="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark mb-1.5"
-                  >
-                    {t("auth.username")}
-                  </label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-                      <UserIcon />
-                    </span>
-                    <input
-                      id="username"
-                      name="username"
-                      type="text"
-                      autoComplete="username"
-                      value={username}
-                      onChange={(e) => {
-                        setUsername(e.target.value);
-                        clearError();
-                      }}
-                      disabled={anyLoading}
-                      className="w-full ps-10 pe-3 py-2.5 rounded-lg border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark text-text-primary-light dark:text-text-primary-dark placeholder:text-text-muted-light dark:placeholder:text-text-muted-dark focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 transition-colors"
-                      placeholder={t("auth.usernamePlaceholder")}
-                    />
                   </div>
                 </div>
 
