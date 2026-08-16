@@ -1,4 +1,4 @@
-﻿import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { AuthenticateWithRedirectCallback } from "@clerk/clerk-react";
@@ -19,6 +19,15 @@ import NotificationsPage from "./pages/Notifications";
 import Members from "./pages/Members";
 import Comments from "./pages/Comments";
 
+function SsoCallback() {
+  return (
+    <>
+      <AuthenticateWithRedirectCallback />
+      <div id="clerk-captcha" />
+    </>
+  );
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -34,7 +43,7 @@ export default function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route
             path="/sso-callback"
-            element={<AuthenticateWithRedirectCallback />}
+            element={<SsoCallback />}
           />
             <Route element={<ProtectedRoute />}>
               <Route element={<AppLayout />}>
