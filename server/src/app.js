@@ -31,6 +31,7 @@ const distDir = path.resolve(__dirname, "../../client/dist");
 const indexHtml = path.join(distDir, "index.html");
 
 const app = express();
+app.set("trust proxy", 1);
 
 app.use(
   helmet({
