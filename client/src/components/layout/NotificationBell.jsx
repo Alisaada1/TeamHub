@@ -8,6 +8,7 @@ import { useWorkspace } from "../../context/WorkspaceContext";
 import { queryKeys } from "../../api/queryKeys";
 import { toast } from "../../utils/toast";
 import { getNotificationMessage } from "../../utils/localizedText";
+import { notificationHref } from "../../utils/notificationHref";
 import Avatar from "../ui/Avatar";
 import { BellIcon, CheckIcon, XIcon } from "../icons/Icons";
 
@@ -21,14 +22,6 @@ function timeAgo(iso, t) {
   if (diffH < 24) return t("notifications.time.hoursAgo", { count: diffH });
   const diffD = Math.floor(diffH / 24);
   return t("notifications.time.daysAgo", { count: diffD });
-}
-
-function notificationHref(n) {
-  if (n.type === "MEMBER_REMOVED") return "/dashboard";
-  if (n.type === "MEMBER_ADDED" || n.type === "ROLE_CHANGED") return "/members";
-  if (["INVITATION", "INVITATION_ACCEPTED", "INVITATION_REJECTED"].includes(n.type)) return "/members";
-  if (["TASK_ASSIGNED", "TASK_UNASSIGNED", "STATUS_CHANGED", "COMMENT_ADDED", "DUE_SOON", "OVERDUE"].includes(n.type) && n.link) return `/projects?projectId=${n.link}`;
-  return "/notifications";
 }
 
 export default function NotificationBell() {
