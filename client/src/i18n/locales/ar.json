@@ -187,7 +187,9 @@
         "forgotNewPasswordLabel": "كلمة المرور الجديدة",
         "forgotSubmitButton": "إعادة تعيين كلمة المرور",
         "backToSignIn": "العودة إلى تسجيل الدخول",
-        "backToSignUp": "العودة إلى إنشاء الحساب"
+        "backToSignUp": "العودة إلى إنشاء الحساب",
+        "wrongAccountTitle": "حساب خاطئ",
+        "wrongAccountMessage": "تم إرسال هذا الدعوة إلى {email}. يرجى تسجيل الخروج لتسجيل الدخول بالحساب الصحيح."
     },
     "settings": {
         "title": "الإعدادات",
