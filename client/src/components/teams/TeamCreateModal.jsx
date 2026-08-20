@@ -22,8 +22,6 @@ function ToggleSwitch({ checked, onChange }) {
   );
 }
 
-const ROLE_OPTIONS = ["MEMBER", "SUPERVISOR", "MANAGER"];
-
 export default function TeamCreateModal({ open, onClose }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -32,7 +30,7 @@ export default function TeamCreateModal({ open, onClose }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [inviteRows, setInviteRows] = useState([{ email: "", role: "" }]);
+  const [inviteRows, setInviteRows] = useState([{ email: "", role: "MEMBER" }]);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -40,7 +38,7 @@ export default function TeamCreateModal({ open, onClose }) {
       setName("");
       setDescription("");
       setInviteOpen(false);
-      setInviteRows([{ email: "", role: "" }]);
+      setInviteRows([{ email: "", role: "MEMBER" }]);
       setError(null);
     }
   }, [open]);
@@ -54,7 +52,7 @@ export default function TeamCreateModal({ open, onClose }) {
   }
 
   function addRow() {
-    setInviteRows((prev) => [...prev, { email: "", role: "" }]);
+    setInviteRows((prev) => [...prev, { email: "", role: "MEMBER" }]);
   }
 
   function removeRow(index) {
@@ -69,20 +67,37 @@ export default function TeamCreateModal({ open, onClose }) {
       });
       const created = res.data;
       if (invites.length > 0) {
-        await Promise.allSettled(
+        const results = await Promise.allSettled(
           invites.map((inv) => inviteUser(created.id, inv.email, inv.role))
         );
+        const failures = [];
+        results.forEach((r, i) => {
+          if (r.status === "rejected") {
+            failures.push({
+              email: invites[i].email,
+              error: r.reason?.response?.data?.error || r.reason?.message || "Failed",
+            });
+          }
+        });
+        if (failures.length > 0) {
+          created._inviteErrors = failures;
+        }
       }
       return created;
     },
     onSuccess: (created) => {
       toast.success(t("teams.toasts.created"), created.name);
+      if (created._inviteErrors?.length > 0) {
+        for (const fail of created._inviteErrors) {
+          toast.error(`${fail.email}: ${fail.error}`);
+        }
+      }
       invalidateQueryCache(queryClient, "team");
       onClose();
       navigate("/dashboard");
     },
     onError: (err) => {
-      setError(err?.message || t("common.error"));
+      setError(err?.response?.data?.error || err?.message || t("common.error"));
     },
   });
 
@@ -99,6 +114,10 @@ export default function TeamCreateModal({ open, onClose }) {
       for (const row of inviteRows) {
         const email = row.email.trim();
         if (!email) continue;
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          setError(t("teams.errors.invalidEmail", "Please enter a valid email address"));
+          return;
+        }
         invites.push({ email, role: row.role || "MEMBER" });
       }
     }
@@ -168,10 +187,9 @@ export default function TeamCreateModal({ open, onClose }) {
                     disabled={createMutation.isPending}
                     className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-sm text-text-primary-light dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors disabled:opacity-50"
                   >
-                    <option value="">{t("teams.allRoles", "Role")}</option>
-                    {ROLE_OPTIONS.map((role) => (
-                      <option key={role} value={role}>{t("roles." + role)}</option>
-                    ))}
+                    <option value="MEMBER">{t("roles.MEMBER")}</option>
+                    <option value="SUPERVISOR">{t("roles.SUPERVISOR")}</option>
+                    <option value="MANAGER">{t("roles.MANAGER")}</option>
                   </select>
                 </div>
                 {inviteRows.length > 1 && (
