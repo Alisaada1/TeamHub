@@ -187,7 +187,9 @@
         "forgotNewPasswordLabel": "New password",
         "forgotSubmitButton": "Reset Password",
         "backToSignIn": "Back to sign in",
-        "backToSignUp": "Back to sign up"
+        "backToSignUp": "Back to sign up",
+        "wrongAccountTitle": "Wrong Account",
+        "wrongAccountMessage": "This invitation was sent to {email}. Please sign out to log in with the correct account."
     },
     "settings": {
         "title": "Settings",
