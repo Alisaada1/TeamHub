@@ -82,7 +82,7 @@ async function notifyTaskAssigned(task, actorId, teamId) {
   }
 }
 
-async function notifyTaskUnassigned(previousAssigneeId, actorId, taskId, taskTitle, teamId) {
+async function notifyTaskUnassigned(previousAssigneeId, actorId, taskId, taskTitle, teamId, projectId) {
   if (!previousAssigneeId || previousAssigneeId === actorId) return;
   try {
     const [unassignedUser, actor] = await Promise.all([
@@ -96,6 +96,7 @@ async function notifyTaskUnassigned(previousAssigneeId, actorId, taskId, taskTit
         message: `${actor?.name || "Someone"} removed you from "${taskTitle}"`,
         entityType: "task",
         entityId: taskId,
+        link: projectId || null,
         data: { taskTitle },
         teamId: teamId || null,
         userId: previousAssigneeId,
@@ -110,6 +111,7 @@ async function notifyTaskUnassigned(previousAssigneeId, actorId, taskId, taskTit
           recipientName: unassignedUser.name,
           subject: "[TeamHub] You have been unassigned from a task",
           notificationTitle: `You have been unassigned from "${taskTitle}"`,
+          ctaLink: projectId || null,
         });
       }
     }
@@ -240,7 +242,7 @@ export async function updateTask(req, res, next) {
           : `Assigned task "${task.title}" to ${newAssignee?.name || "someone"}`;
         await activityService.logActivity(req.userId, "REASSIGNED_TASK", "task", task.id, details, teamId, { task: task.title });
       } else if (taskData.assigneeId === null && previousTask.assigneeId) {
-        await notifyTaskUnassigned(previousTask.assigneeId, req.userId, task.id, task.title, teamId);
+        await notifyTaskUnassigned(previousTask.assigneeId, req.userId, task.id, task.title, teamId, task.projectId);
         await activityService.logActivity(req.userId, "REASSIGNED_TASK", "task", task.id, `Unassigned task "${task.title}" from ${previousTask.assignee?.name || "someone"}`, teamId, { task: task.title });
       } else {
         await activityService.logActivity(req.userId, "UPDATED_TASK", "task", task.id, `Updated task "${task.title}"`, teamId, { task: task.title });
