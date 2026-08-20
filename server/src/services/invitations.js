@@ -242,6 +242,15 @@ export async function rejectInvitation(invitationId, userId) {
   return { success: true };
 }
 
+export async function lookupInvitation(invitationId) {
+  const invitation = await prisma.invitation.findUnique({
+    where: { id: invitationId },
+    select: { email: true, status: true, team: { select: { name: true } } },
+  });
+  if (!invitation || invitation.status !== "PENDING") return null;
+  return invitation;
+}
+
 export async function checkPendingByEmail(email) {
   const normalizedEmail = email.trim().toLowerCase();
   return prisma.invitation.findMany({
