@@ -29,3 +29,8 @@ export async function rejectInvitation(invitationId) {
   const { data } = await client.post(`/invitations/${invitationId}/reject`);
   return data;
 }
+
+export async function lookupInvitation(invitationId) {
+  const { data } = await client.get(`/invitations/${invitationId}/lookup`);
+  return data;
+}
