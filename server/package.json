@@ -20,7 +20,8 @@
     "express": "^4.21.0",
     "express-rate-limit": "^8.5.2",
     "helmet": "^8.3.0",
-    "node-cron": "^4.6.0"
+    "node-cron": "^4.6.0",
+    "svix": "^1.15.0"
   },
   "devDependencies": {
     "prisma": "^6.5.0",
