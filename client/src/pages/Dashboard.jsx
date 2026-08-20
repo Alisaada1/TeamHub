@@ -226,6 +226,8 @@ export default function Dashboard() {
     if (teams.length === 0) {
       return (
         <div className="space-y-4">
+          <PendingInviteBanner />
+
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <h1 className="text-xl md:text-2xl font-bold text-text-primary-light dark:text-text-primary-dark">
