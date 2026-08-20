@@ -71,6 +71,32 @@ async function provisionUser(clerkUserId) {
     user = await prisma.user.create({
       data: { clerkId: clerkUserId, name: safeName, email: safeEmail, imageUrl: clerkUser.imageUrl || null },
     });
+
+    const pendingInvitations = await prisma.invitation.findMany({
+      where: { email: safeEmail, status: "PENDING" },
+      include: { team: { select: { name: true } }, invitedBy: { select: { name: true } } },
+    });
+    for (const inv of pendingInvitations) {
+      const exists = await prisma.notification.findFirst({
+        where: { userId: user.id, type: "INVITATION", teamId: inv.teamId },
+      });
+      if (!exists) {
+        await prisma.notification.create({
+          data: {
+            type: "INVITATION",
+            title: `${inv.invitedBy?.name || "Someone"} has invited you to join the team ${inv.team?.name || "a team"}`,
+            message: `${inv.invitedBy?.name || "Someone"} invited you to join ${inv.team?.name || "a team"}`,
+            entityType: "team",
+            entityId: inv.id,
+            link: inv.teamId,
+            data: { teamName: inv.team?.name },
+            teamId: inv.teamId,
+            userId: user.id,
+            actorId: inv.invitedById,
+          },
+        });
+      }
+    }
   }
 
   return user;
