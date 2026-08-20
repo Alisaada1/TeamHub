@@ -1,6 +1,16 @@
 import * as invitationService from "../services/invitations.js";
 import prisma from "../config/prisma.js";
 
+export async function lookupInvitation(req, res, next) {
+  try {
+    const invitation = await invitationService.lookupInvitation(req.params.id);
+    if (!invitation) return res.status(404).json({ success: false, data: null, error: "Invitation not found" });
+    return res.json({ success: true, data: { email: invitation.email, teamName: invitation.team?.name || null }, error: null });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function inviteUser(req, res, next) {
   try {
     const { email, role } = req.body;
