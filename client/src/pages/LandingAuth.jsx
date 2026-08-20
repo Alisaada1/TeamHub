@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useSignIn, useSignUp, useAuth } from "@clerk/clerk-react";
+import { useSignIn, useSignUp, useAuth, useUser } from "@clerk/clerk-react";
 import { useTheme } from "../context/ThemeContext";
 import Logo from "../components/layout/Logo";
 import OtpInput from "../components/ui/OtpInput";
 import { SunIcon, MoonIcon, LangIcon } from "../components/icons/Icons";
+import { lookupInvitation } from "../api";
 
 const PROVIDER_STRATEGIES = {
   google: "oauth_google",
@@ -425,10 +426,40 @@ export function Landing() {
   );
 }
 
+function WrongAccountMessage({ email }) {
+  const { t } = useTranslation();
+  const { signOut } = useAuth();
+  return (
+    <div className="min-h-screen flex flex-col bg-bg-light dark:bg-bg-dark">
+      <AuthNavBar />
+      <div className="flex-1 flex items-center justify-center px-6 py-12">
+        <div className="relative w-full max-w-md text-center">
+          <div className="bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl shadow-xl shadow-primary-900/5 p-8">
+            <h2 className="text-xl font-bold text-text-primary-light dark:text-text-primary-dark mb-3">
+              {t("auth.wrongAccountTitle")}
+            </h2>
+            <p className="text-sm text-text-muted-light dark:text-text-muted-dark mb-6">
+              {t("auth.wrongAccountMessage", { email })}
+            </p>
+            <button
+              type="button"
+              onClick={() => signOut()}
+              className="w-full px-4 py-3 rounded-lg bg-primary-500 hover:bg-primary-600 text-white font-semibold shadow-lg shadow-primary-500/30 transition-all"
+            >
+              {t("nav.signOut")}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SignIn() {
   const { t } = useTranslation();
   const { signIn, isLoaded: signInLoaded, setActive } = useSignIn();
   const { isSignedIn } = useAuth();
+  const { user: clerkUser } = useUser();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || "/dashboard";
@@ -439,13 +470,39 @@ export function SignIn() {
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState(null);
   const [error, setError] = useState(null);
+  const [wrongAccountEmail, setWrongAccountEmail] = useState(null);
 
   useEffect(() => {
-    if (isSignedIn) navigate("/dashboard", { replace: true });
-  }, [isSignedIn, navigate]);
+    if (!isSignedIn) return;
+    const invitationId = new URLSearchParams(window.location.search).get("invitation");
+    if (!invitationId) {
+      navigate("/dashboard", { replace: true });
+      return;
+    }
+    lookupInvitation(invitationId).then((res) => {
+      const data = res?.data;
+      if (!data) {
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+      const userEmail = clerkUser?.emailAddresses?.[0]?.emailAddress?.toLowerCase();
+      if (userEmail && userEmail !== data.email.toLowerCase()) {
+        setWrongAccountEmail(data.email);
+      } else {
+        navigate("/notifications", { replace: true });
+      }
+    }).catch(() => {
+      navigate("/dashboard", { replace: true });
+    });
+  }, [isSignedIn, navigate, clerkUser]);
 
   function clearError() {
     if (error) setError(null);
+  }
+
+  function postAuthRedirect() {
+    const invitationId = new URLSearchParams(window.location.search).get("invitation");
+    navigate(invitationId ? "/notifications" : from, { replace: true });
   }
 
   async function handleSubmit(e) {
@@ -453,7 +510,7 @@ export function SignIn() {
     setError(null);
 
     if (isSignedIn) {
-      navigate("/dashboard", { replace: true });
+      postAuthRedirect();
       return;
     }
 
@@ -475,7 +532,7 @@ export function SignIn() {
       });
       if (result.status === "complete") {
         await setActive({ session: result.createdSessionId });
-        navigate(from, { replace: true });
+        postAuthRedirect();
       } else {
         setError(t("auth.errors.signInFailed"));
       }
@@ -490,16 +547,20 @@ export function SignIn() {
   async function handleProvider(provider) {
     if (!signInLoaded) return;
     if (isSignedIn) {
-      navigate("/dashboard", { replace: true });
+      postAuthRedirect();
       return;
     }
     setError(null);
     setSocialLoading(provider);
     try {
+      const invitationId = new URLSearchParams(window.location.search).get("invitation");
+      const completeUrl = invitationId
+        ? `${window.location.origin}/notifications`
+        : `${window.location.origin}${from}`;
       await signIn.authenticateWithRedirect({
         strategy: PROVIDER_STRATEGIES[provider],
         redirectUrl: `${window.location.origin}/sso-callback`,
-        redirectUrlComplete: `${window.location.origin}${from}`,
+        redirectUrlComplete: completeUrl,
       });
     } catch (err) {
       setError(err?.errors?.[0]?.longMessage || t("auth.errors.socialSignInFailed"));
@@ -508,6 +569,10 @@ export function SignIn() {
   }
 
   const anyLoading = loading || socialLoading !== null;
+
+  if (wrongAccountEmail) {
+    return <WrongAccountMessage email={wrongAccountEmail} />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-bg-light dark:bg-bg-dark">
@@ -668,11 +733,8 @@ export function SignUp() {
   const { t } = useTranslation();
   const { signUp, isLoaded: signUpLoaded, setActive } = useSignUp();
   const { isSignedIn } = useAuth();
+  const { user: clerkUser } = useUser();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    if (isSignedIn) navigate("/dashboard", { replace: true });
-  }, [isSignedIn, navigate]);
 
   const [step, setStep] = useState("form");
   const [firstName, setFirstName] = useState("");
@@ -683,9 +745,39 @@ export function SignUp() {
   const [verificationCode, setVerificationCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [wrongAccountEmail, setWrongAccountEmail] = useState(null);
+
+  useEffect(() => {
+    if (!isSignedIn) return;
+    const invitationId = new URLSearchParams(window.location.search).get("invitation");
+    if (!invitationId) {
+      navigate("/dashboard", { replace: true });
+      return;
+    }
+    lookupInvitation(invitationId).then((res) => {
+      const data = res?.data;
+      if (!data) {
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+      const userEmail = clerkUser?.emailAddresses?.[0]?.emailAddress?.toLowerCase();
+      if (userEmail && userEmail !== data.email.toLowerCase()) {
+        setWrongAccountEmail(data.email);
+      } else {
+        navigate("/notifications", { replace: true });
+      }
+    }).catch(() => {
+      navigate("/dashboard", { replace: true });
+    });
+  }, [isSignedIn, navigate, clerkUser]);
 
   function clearError() {
     if (error) setError(null);
+  }
+
+  function postAuthRedirect() {
+    const invitationId = new URLSearchParams(window.location.search).get("invitation");
+    navigate(invitationId ? "/notifications" : "/dashboard", { replace: true });
   }
 
   async function handleSubmit(e) {
@@ -693,7 +785,7 @@ export function SignUp() {
     setError(null);
 
     if (isSignedIn) {
-      navigate("/dashboard", { replace: true });
+      postAuthRedirect();
       return;
     }
 
@@ -730,7 +822,7 @@ export function SignUp() {
 
       if (result.status === "complete") {
         await setActive({ session: result.createdSessionId });
-        navigate("/dashboard", { replace: true });
+        postAuthRedirect();
       } else if (
         result.status === "missing_requirements" &&
         result.unverifiedFields?.includes("email_address")
@@ -765,7 +857,7 @@ export function SignUp() {
 
       if (result.status === "complete") {
         await setActive({ session: result.createdSessionId });
-        navigate("/dashboard", { replace: true });
+        postAuthRedirect();
       } else {
         setError(t("auth.errors.verificationFailed"));
       }
@@ -778,6 +870,10 @@ export function SignUp() {
   }
 
   const anyLoading = loading;
+
+  if (wrongAccountEmail) {
+    return <WrongAccountMessage email={wrongAccountEmail} />;
+  }
 
   if (step === "verify") {
     return (
