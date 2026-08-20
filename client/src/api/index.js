@@ -36,7 +36,7 @@ export {
 
 export {
   inviteUser, listPendingByTeam, listPendingByEmail,
-  cancelInvitation, acceptInvitation, rejectInvitation,
+  cancelInvitation, acceptInvitation, rejectInvitation, lookupInvitation,
 } from "./invitations";
 
 export {
