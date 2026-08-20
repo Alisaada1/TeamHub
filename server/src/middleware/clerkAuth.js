@@ -73,59 +73,6 @@ async function provisionUser(clerkUserId) {
     });
   }
 
-  if (email) {
-    const pendingInvitations = await prisma.invitation.findMany({
-      where: { email: safeEmail, status: "PENDING" },
-    });
-    for (const inv of pendingInvitations) {
-      const alreadyMember = await prisma.member.findUnique({
-        where: { userId_teamId: { userId: user.id, teamId: inv.teamId } },
-      });
-      if (!alreadyMember) {
-        await prisma.member.create({
-          data: { userId: user.id, teamId: inv.teamId, role: inv.role },
-        });
-        await prisma.invitation.update({
-          where: { id: inv.id },
-          data: { status: "ACCEPTED" },
-        });
-
-        const team = await prisma.team.findUnique({ where: { id: inv.teamId }, select: { name: true } });
-        await prisma.notification.create({
-          data: {
-            type: "MEMBER_ADDED",
-            title: `You have been automatically added to the team ${team?.name || "a team"} (invitation accepted)`,
-            message: `Welcome to ${team?.name || "the team"}! Your invitation has been accepted.`,
-            entityType: "team",
-            entityId: inv.teamId,
-            link: inv.teamId,
-            data: { teamName: team?.name || null },
-            teamId: inv.teamId,
-            userId: user.id,
-            actorId: inv.invitedById,
-          },
-        });
-
-        if (inv.invitedById) {
-          await prisma.notification.create({
-            data: {
-              type: "INVITATION_ACCEPTED",
-              title: `${user.name || "Someone"} has accepted your invitation`,
-              message: `${user.name || "Someone"} accepted your invitation to join ${team?.name || "the team"}`,
-              entityType: "team",
-              entityId: inv.teamId,
-              link: inv.teamId,
-              data: { teamName: team?.name || null },
-              teamId: inv.teamId,
-              userId: inv.invitedById,
-              actorId: user.id,
-            },
-          });
-        }
-      }
-    }
-  }
-
   return user;
 }
 
