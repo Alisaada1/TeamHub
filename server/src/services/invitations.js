@@ -157,10 +157,13 @@ export async function acceptInvitation(invitationId, userId) {
   ]);
 
   const notification = await prisma.notification.findFirst({
-    where: { userId, type: "INVITATION", entityId: invitation.teamId, read: false },
+    where: { userId, type: "INVITATION", entityId: invitation.id },
   });
   if (notification) {
-    await prisma.notification.update({ where: { id: notification.id }, data: { read: true } });
+    await prisma.notification.update({
+      where: { id: notification.id },
+      data: { read: true, type: "INVITATION_ACCEPTED" },
+    });
   }
 
   if (invitation.invitedById) {
@@ -216,10 +219,13 @@ export async function rejectInvitation(invitationId, userId) {
   });
 
   const notification = await prisma.notification.findFirst({
-    where: { userId, type: "INVITATION", entityId: invitation.teamId, read: false },
+    where: { userId, type: "INVITATION", entityId: invitation.id },
   });
   if (notification) {
-    await prisma.notification.update({ where: { id: notification.id }, data: { read: true } });
+    await prisma.notification.update({
+      where: { id: notification.id },
+      data: { read: true, type: "INVITATION_REJECTED" },
+    });
   }
 
   if (invitation.invitedById) {
