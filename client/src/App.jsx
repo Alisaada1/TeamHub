@@ -22,7 +22,7 @@ import Comments from "./pages/Comments";
 function SsoCallback() {
   return (
     <>
-      <AuthenticateWithRedirectCallback redirectUrl="/dashboard" />
+      <AuthenticateWithRedirectCallback />
       <div id="clerk-captcha" />
     </>
   );
