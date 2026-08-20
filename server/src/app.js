@@ -22,6 +22,7 @@ import presenceRoutes from "./routes/presence.js";
 import invitationRoutes from "./routes/invitations.js";
 import dashboardRoutes from "./routes/dashboard.js";
 import activityRoutes from "./routes/activity.js";
+import webhookRoutes from "./routes/webhooks.js";
 
 import { ALLOWED_ORIGINS } from "./config/env.js";
 import prisma from "./config/prisma.js";
@@ -61,6 +62,9 @@ app.use(
   })
 );
 app.use(cors({ origin: ALLOWED_ORIGINS, credentials: true }));
+
+app.use("/api/webhooks", express.raw({ type: "application/json" }), webhookRoutes);
+
 app.use(express.json({ limit: "1mb" }));
 
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false });
