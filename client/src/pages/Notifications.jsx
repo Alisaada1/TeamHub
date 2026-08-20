@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -12,6 +12,7 @@ import Avatar from "../components/ui/Avatar";
 import { BellIcon } from "../components/icons/Icons";
 import { toast } from "../utils/toast";
 import { getNotificationMessage } from "../utils/localizedText";
+import { notificationHref } from "../utils/notificationHref";
 
 function timeAgo(iso, t) {
   const diffMin = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
@@ -36,6 +37,15 @@ export default function NotificationsPage() {
   });
 
   const items = data?.data || [];
+
+  useEffect(() => {
+    if (!user) return;
+    api.markAllNotificationsRead(user.id).then(() => {
+      queryClient.setQueryData(queryKeys.notifications, (old) =>
+        old ? { ...old, data: (old.data || []).map((n) => ({ ...n, read: true })) } : old
+      );
+    });
+  }, [user, queryClient]);
 
   const patchItem = (id, patch) => {
     queryClient.setQueryData(queryKeys.notifications, (old) =>
@@ -82,11 +92,8 @@ export default function NotificationsPage() {
   });
 
   function handleClick(n) {
-    if (n.type === "INVITATION") return;
     if (!n.read) markReadMutation.mutate(n.id);
-    if (n.type === "MEMBER_REMOVED") navigate("/dashboard");
-    else if (n.type === "MEMBER_ADDED" || n.type === "ROLE_CHANGED") navigate("/members");
-    else if (n.link) navigate(`/projects?projectId=${n.link}`);
+    navigate(notificationHref(n));
   }
 
   if (isLoading) return <LoadingSkeleton rows={4} />;
@@ -117,8 +124,8 @@ export default function NotificationsPage() {
             return (
               <div
                 key={n.id}
-                className={`flex items-start gap-3 p-3 ${!n.read ? "bg-primary-50/40 dark:bg-primary-900/10" : ""} ${isInvitation ? "" : "cursor-pointer hover:bg-bg-light dark:hover:bg-bg-dark"}`}
-                onClick={() => !isInvitation && handleClick(n)}
+                className={`flex items-start gap-3 p-3 cursor-pointer hover:bg-bg-light dark:hover:bg-bg-dark ${!n.read ? "bg-primary-50/40 dark:bg-primary-900/10" : ""}`}
+                onClick={() => handleClick(n)}
               >
                 <Avatar name={n.actor?.name} size="sm" />
                 <div className="flex-1 min-w-0">
@@ -143,7 +150,7 @@ export default function NotificationsPage() {
                     )}
                     <span>{timeAgo(n.createdAt, t)}</span>
                   </div>
-                  {isInvitation && !n.read && (
+                  {isInvitation && (
                     <div className="flex items-center gap-2 mt-2">
                       <button
                         type="button"
