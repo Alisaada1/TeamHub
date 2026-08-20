@@ -1,0 +1,8 @@
+import app from "./app.js";
+import { PORT } from "./config/env.js";
+import { startReminderJobs } from "./jobs/reminderJob.js";
+
+startReminderJobs();
+app.listen(PORT, () => {
+  console.log(`TeamHub server running on http://localhost:${PORT}`);
+});
