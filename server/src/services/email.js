@@ -21,6 +21,9 @@ function getTransporter() {
     secure: port === 465,
     auth: { user, pass },
     tls: { rejectUnauthorized: true },
+    family: 4,
+    connectionTimeout: 10000,
+    socketTimeout: 15000,
   });
 
   return _transporter;
