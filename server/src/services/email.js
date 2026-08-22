@@ -1,6 +1,8 @@
 import { FRONTEND_URL } from "../config/env.js";
 
-const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const EMAILJS_SERVICE_ID = process.env.EMAILJS_SERVICE_ID;
+const EMAILJS_TEMPLATE_ID = process.env.EMAILJS_TEMPLATE_ID;
+const EMAILJS_PUBLIC_KEY = process.env.EMAILJS_PUBLIC_KEY;
 const FROM_NAME = process.env.SMTP_FROM_NAME || "TeamHub";
 const FROM_EMAIL = process.env.SMTP_FROM_EMAIL || "hubteam434@gmail.com";
 
@@ -36,29 +38,32 @@ function buildBaseLayout(title, bodyHtml) {
 }
 
 async function sendEmail({ to, subject, html, text }) {
-  if (!BREVO_API_KEY) {
-    throw new Error("BREVO_API_KEY env var is missing");
+  if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID || !EMAILJS_PUBLIC_KEY) {
+    throw new Error("EmailJS env vars missing: EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY");
   }
 
-  const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+  const response = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
     method: "POST",
-    headers: {
-      accept: "application/json",
-      "content-type": "application/json",
-      "api-key": BREVO_API_KEY,
-    },
+    headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      sender: { name: FROM_NAME, email: FROM_EMAIL },
-      to: [{ email: to }],
-      subject,
-      htmlContent: html,
-      textContent: text,
+      service_id: EMAILJS_SERVICE_ID,
+      template_id: EMAILJS_TEMPLATE_ID,
+      user_id: EMAILJS_PUBLIC_KEY,
+      template_params: {
+        to_email: to,
+        from_name: FROM_NAME,
+        from_email: FROM_EMAIL,
+        subject,
+        html_content: html,
+        text_content: text,
+      },
     }),
   });
 
+  const result = await response.text();
+
   if (!response.ok) {
-    const errBody = await response.text();
-    throw new Error(`Brevo API error (${response.status}): ${errBody}`);
+    throw new Error(`EmailJS error (${response.status}): ${result}`);
   }
 
   console.log(`Email sent to ${to}: ${subject}`);
