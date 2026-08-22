@@ -1,21 +1,36 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 import { FRONTEND_URL } from "../config/env.js";
 
-let _resend = null;
+let _transporter = null;
 
-function getResendClient() {
-  if (_resend) return _resend;
+function getTransporter() {
+  if (_transporter) return _transporter;
 
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    throw new Error("RESEND_API_KEY env var is missing");
+  const host = process.env.SMTP_HOST;
+  const port = Number(process.env.SMTP_PORT) || 587;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+
+  if (!host || !user || !pass) {
+    throw new Error("SMTP env vars missing: SMTP_HOST, SMTP_USER, SMTP_PASS");
   }
 
-  _resend = new Resend(apiKey);
-  return _resend;
+  _transporter = nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass },
+    tls: { rejectUnauthorized: true },
+    family: 4,
+    connectionTimeout: 10000,
+    socketTimeout: 15000,
+  });
+
+  return _transporter;
 }
 
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+const FROM_NAME = process.env.SMTP_FROM_NAME || "TeamHub";
+const FROM_EMAIL = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER;
 
 function buildBaseLayout(title, bodyHtml) {
   return `<!DOCTYPE html>
@@ -49,11 +64,11 @@ function buildBaseLayout(title, bodyHtml) {
 }
 
 async function sendEmail({ to, subject, html, text }) {
-  const resend = getResendClient();
+  const transporter = getTransporter();
 
-  await resend.emails.send({
-    from: `"TeamHub" <${FROM_EMAIL}>`,
-    to: [to],
+  await transporter.sendMail({
+    from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
+    to,
     subject,
     text,
     html,
