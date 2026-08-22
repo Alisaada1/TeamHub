@@ -1,36 +1,8 @@
-import nodemailer from "nodemailer";
 import { FRONTEND_URL } from "../config/env.js";
 
-let _transporter = null;
-
-function getTransporter() {
-  if (_transporter) return _transporter;
-
-  const host = process.env.SMTP_HOST;
-  const port = Number(process.env.SMTP_PORT) || 587;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-
-  if (!host || !user || !pass) {
-    throw new Error("SMTP env vars missing: SMTP_HOST, SMTP_USER, SMTP_PASS");
-  }
-
-  _transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: { user, pass },
-    tls: { rejectUnauthorized: true },
-    family: 4,
-    connectionTimeout: 10000,
-    socketTimeout: 15000,
-  });
-
-  return _transporter;
-}
-
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
 const FROM_NAME = process.env.SMTP_FROM_NAME || "TeamHub";
-const FROM_EMAIL = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER;
+const FROM_EMAIL = process.env.SMTP_FROM_EMAIL || "hubteam434@gmail.com";
 
 function buildBaseLayout(title, bodyHtml) {
   return `<!DOCTYPE html>
@@ -64,15 +36,30 @@ function buildBaseLayout(title, bodyHtml) {
 }
 
 async function sendEmail({ to, subject, html, text }) {
-  const transporter = getTransporter();
+  if (!BREVO_API_KEY) {
+    throw new Error("BREVO_API_KEY env var is missing");
+  }
 
-  await transporter.sendMail({
-    from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
-    to,
-    subject,
-    text,
-    html,
+  const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      "content-type": "application/json",
+      "api-key": BREVO_API_KEY,
+    },
+    body: JSON.stringify({
+      sender: { name: FROM_NAME, email: FROM_EMAIL },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+      textContent: text,
+    }),
   });
+
+  if (!response.ok) {
+    const errBody = await response.text();
+    throw new Error(`Brevo API error (${response.status}): ${errBody}`);
+  }
 
   console.log(`Email sent to ${to}: ${subject}`);
 }
